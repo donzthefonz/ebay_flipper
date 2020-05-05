@@ -110,6 +110,9 @@ def search_and_filter(wanted_item: WantedItem):
 
                 # Send alert to discord.
                 item.send_alert(wanted_item)
+            else:
+                item.passed_filter = False
+                item.save()
 
     except Exception as e:
         print(e)

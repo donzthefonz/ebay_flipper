@@ -12,6 +12,11 @@ from ebaysdk.finding import Connection as Finding
 from ebaysdk.shopping import Connection as Shopping
 import discord
 
+# Import smtplib for the actual sending function
+import smtplib
+# Import the email modules we'll need
+from email.mime.text import MIMEText
+
 # from django.contrib.postgres.fields import ArrayField
 
 db_logger = logging.getLogger('db')
@@ -36,7 +41,8 @@ class NotificationRoute(models.Model):
 
     TYPE_CHOICES = [
         ('DIS', 'Discord'),
-        ('SLK', 'Slack')
+        ('SLK', 'Slack'),
+        ('EMA', 'Email')
     ]
 
     name = models.CharField(max_length=400)
@@ -274,6 +280,7 @@ class EbayItem(models.Model):
     image = models.CharField(max_length=300)
     url = models.CharField(max_length=300)
     seller_feedback = models.IntegerField()
+    passed_filter = models.BooleanField(default=True)
     insert_date = models.DateTimeField(auto_now_add=True)
     deleted = models.BooleanField(default=False)
 
@@ -448,6 +455,21 @@ class EbayItem(models.Model):
 
                     # Send it
                     webhook.send(embed=embed)
+
+                elif notification_route.type == 'EMA':
+                    me = 'alert@ebayflipper.com'
+                    to = notification_route.webhook
+                    # Email notification
+                    msg = MIMEText(self.url)
+                    msg['Subject'] = 'New Item Alert - {}'.format(self.name)
+                    msg['From'] = me
+                    msg['To'] = to
+
+                    # Send the message via our own SMTP server, but don't include the
+                    # envelope header.
+                    s = smtplib.SMTP('localhost')
+                    s.sendmail(me, [to], msg.as_string())
+                    s.quit()
 
                 else:
                     # TODO: Slack webhook parse
