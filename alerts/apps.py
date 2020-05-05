@@ -1,5 +1,4 @@
 from django.apps import AppConfig
-from tasks import notify_user
 
 
 class AlertsConfig(AppConfig):

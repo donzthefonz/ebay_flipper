@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Variables
 POSTGRES_PASS = os.getenv("POSTGRES_PASS")
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'djmoney',
     'background_task',
     'alerts',
+    'django_db_logger'
 
 ]
 
@@ -137,38 +138,25 @@ STATIC_URL = '/static/'
 # Logging
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
-
+    'disable_existing_loggers': False,
     'formatters': {
-        'console': {
-            'format': '[%(asctime)s][%(levelname)s] %(name)s '
-                      '%(filename)s:%(funcName)s:%(lineno)d | %(message)s',
-            'datefmt': '%H:%M:%S',
-            },
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
         },
-
+        'simple': {
+            'format': '%(levelname)s %(asctime)s %(message)s'
+        },
+    },
     'handlers': {
-        'console': {
+        'db_log': {
             'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'console'
-            },
-        'sentry': {
-            'level': 'ERROR',
-            'class': 'raven.handlers.logging.SentryHandler',
-            'dsn': 'https://<key>:<secret>@<organization>.ingest.sentry.io/<project>',
-            },
+            'class': 'django_db_logger.db_log_handler.DatabaseLogHandler'
         },
-
+    },
     'loggers': {
-        '': {
-            'handlers': ['console', 'sentry'],
-            'level': 'DEBUG',
-            'propagate': False,
-            },
-        'alerts': {
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+        'db': {
+            'handlers': ['db_log'],
+            'level': 'DEBUG'
+        }
     }
 }

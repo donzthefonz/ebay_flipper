@@ -17,7 +17,7 @@ admin.site.register(WantedItem, WantedItemAdmin)
 class EbayItemAdmin(admin.ModelAdmin):
     list_display = EbayItem.DISPLAY_FIELDS
     search_fields = EbayItem.DISPLAY_FIELDS
-    list_filter = ['deleted']
+    list_filter = ['deleted', 'listing_type']
     ordering = ('-id', 'name')
     pass
 

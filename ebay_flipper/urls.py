@@ -15,9 +15,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from alerts.tasks import scan_ebay_items
+
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('alerts/', include('alerts.urls')),
 
 ]
+
+# Run once at start up to queue the tasks
+# uncomment the below if no tasks in scheduled tasks yet (must be run once and then commented out again)
+# scan_ebay_items(repeat=60, repeat_until=None)
+

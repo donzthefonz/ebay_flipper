@@ -5,7 +5,8 @@ import discord
 
 import logging
 
-logger = logging.getLogger(__name__)
+db_logger = logging.getLogger('db')
+
 from datetime import timezone, datetime
 
 
@@ -39,78 +40,86 @@ def notify_user():
 
 # TODO: Later do multithreading
 def search_and_filter(wanted_item: WantedItem):
-    # Connect to API
-    wanted_item.connect()
+    try:
 
-    # List to hold all Ebay Items
-    wanted_item.found_items = []
+        # Connect to API
+        wanted_item.connect()
 
-    # Search for latest buy it now / fixed price deals
-    buy_it_now_items = wanted_item.search_buy_it_now()
-    for item in buy_it_now_items:
-        # Check if we have already found and sent this.
-        try:
-            already_found = EbayItem.objects.get(item_id=item['itemId'])
-        except Exception as e:
-            # New item, continue
-            # Prepare Item
-            time_started = datetime.strptime(item['listingInfo']['startTime'],
-                                             '%Y-%m-%dT%H:%M:%S.%fZ')
-            time_started = time_started.replace(tzinfo=timezone.utc)
-            time_ending = datetime.strptime(item['listingInfo']['endTime'],
-                                            '%Y-%m-%dT%H:%M:%S.%fZ')
-            time_ending = time_ending.replace(tzinfo=timezone.utc)
+        # List to hold all Ebay Items
+        wanted_item.found_items = []
 
-            ebay_item = EbayItem(item_id=item['itemId'], name=item['title'], description='', start_time=time_started,
-                                 end_time=time_ending, listing_type=item['listingInfo']['listingType'],
-                                 auction_or_fixed='F',
-                                 price=item['sellingStatus']['currentPrice']['value'], image=item['galleryURL'],
-                                 url=item['viewItemURL'], seller_feedback=int(item['sellerInfo']['feedbackScore']))
+        # Search for latest buy it now / fixed price deals
+        buy_it_now_items = wanted_item.search_buy_it_now()
+        for item in buy_it_now_items:
+            # Check if we have already found and sent this.
+            try:
+                already_found = EbayItem.objects.get(item_id=item['itemId'])
+            except Exception as e:
+                # New item, continue
+                # Prepare Item
+                time_started = datetime.strptime(item['listingInfo']['startTime'],
+                                                 '%Y-%m-%dT%H:%M:%S.%fZ')
+                time_started = time_started.replace(tzinfo=timezone.utc)
+                time_ending = datetime.strptime(item['listingInfo']['endTime'],
+                                                '%Y-%m-%dT%H:%M:%S.%fZ')
+                time_ending = time_ending.replace(tzinfo=timezone.utc)
 
-            wanted_item.found_items.append(ebay_item)
+                ebay_item = EbayItem(item_id=item['itemId'], name=item['title'], description='',
+                                     start_time=time_started,
+                                     end_time=time_ending, listing_type=item['listingInfo']['listingType'],
+                                     auction_or_fixed='F',
+                                     price=item['sellingStatus']['currentPrice']['value'], image=item['galleryURL'],
+                                     url=item['viewItemURL'], seller_feedback=int(item['sellerInfo']['feedbackScore']))
 
-    # Search for latest Auction Deals
-    auction_items = wanted_item.search_auctions()
-    for item in auction_items:
-        # Check if we have already found and sent this.
-        try:
-            already_found = EbayItem.objects.get(item_id=item['itemId'])
-        except Exception as e:
-            # New item, continue
-            # Prepare Item
-            time_started = datetime.strptime(item['listingInfo']['startTime'],
-                                             '%Y-%m-%dT%H:%M:%S.%fZ')
-            time_started = time_started.replace(tzinfo=timezone.utc)
-            time_ending = datetime.strptime(item['listingInfo']['endTime'],
-                                            '%Y-%m-%dT%H:%M:%S.%fZ')
-            time_ending = time_ending.replace(tzinfo=timezone.utc)
+                wanted_item.found_items.append(ebay_item)
 
-            ebay_item = EbayItem(item_id=item['itemId'], name=item['title'], description='', start_time=time_started,
-                                 end_time=time_ending, listing_type=item['listingInfo']['listingType'],
-                                 auction_or_fixed='A',
-                                 price=item['sellingStatus']['currentPrice']['value'], image=item['galleryURL'],
-                                 url=item['viewItemURL'], seller_feedback=int(item['sellerInfo']['feedbackScore']))
+        # Search for latest Auction Deals
+        auction_items = wanted_item.search_auctions()
+        for item in auction_items:
+            # Check if we have already found and sent this.
+            try:
+                already_found = EbayItem.objects.get(item_id=item['itemId'])
+            except Exception as e:
+                # New item, continue
+                # Prepare Item
+                time_started = datetime.strptime(item['listingInfo']['startTime'],
+                                                 '%Y-%m-%dT%H:%M:%S.%fZ')
+                time_started = time_started.replace(tzinfo=timezone.utc)
+                time_ending = datetime.strptime(item['listingInfo']['endTime'],
+                                                '%Y-%m-%dT%H:%M:%S.%fZ')
+                time_ending = time_ending.replace(tzinfo=timezone.utc)
 
-            wanted_item.found_items.append(ebay_item)
+                ebay_item = EbayItem(item_id=item['itemId'], name=item['title'], description='',
+                                     start_time=time_started,
+                                     end_time=time_ending, listing_type=item['listingInfo']['listingType'],
+                                     auction_or_fixed='A',
+                                     price=item['sellingStatus']['currentPrice']['value'], image=item['galleryURL'],
+                                     url=item['viewItemURL'], seller_feedback=int(item['sellerInfo']['feedbackScore']))
 
-    # Filter Auction and Fixed Price items and then send alerts to Discord
-    for item in wanted_item.found_items:
-        item: EbayItem
+                wanted_item.found_items.append(ebay_item)
 
-        passed_filter = item.filter_item(wanted_item)
+        # Filter Auction and Fixed Price items and then send alerts to Discord
+        for item in wanted_item.found_items:
+            item: EbayItem
 
-        if passed_filter:
-            # Add to list of found items. (save to database)
-            item.save()
+            passed_filter = item.filter_item(wanted_item)
 
-            # Send alert to discord.
-            item.send_alert(wanted_item)
+            if passed_filter:
+                # Add to list of found items. (save to database)
+                item.save()
+
+                # Send alert to discord.
+                item.send_alert(wanted_item)
+
+    except Exception as e:
+        print(e)
+        db_logger.exception(e)
 
 
-# @background(schedule=60) # Every minute
+@background(schedule=60)  # Every minute
 def scan_ebay_items():
     try:
-        logger.info("Scanning items...")
+        db_logger.info("Scanning items...")
 
         # Get Wanted Items
         wanted_items = WantedItem.objects.filter(deleted=False)
@@ -118,9 +127,9 @@ def scan_ebay_items():
         for wanted_item in wanted_items:
             search_and_filter(wanted_item)
 
-        logger.info("Finished scanning items...")
+        # db_logger.info("Finished scanning items...")
 
 
     except Exception as e:
         print(e)
-        logger.error('There was an error, with a stack trace!', exc_info=True)
+        db_logger.exception(e)

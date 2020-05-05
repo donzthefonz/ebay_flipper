@@ -14,7 +14,7 @@ import discord
 
 # from django.contrib.postgres.fields import ArrayField
 
-logging.basicConfig(level=logging.ERROR, filename='../error.log')
+db_logger = logging.getLogger('db')
 
 localtimezone = pytz.timezone('Europe/London')
 
@@ -183,7 +183,7 @@ class WantedItem(models.Model):
             else:
                 return []
         except ConnectionError as e:
-            logging.error("{}  :  Exception in search_buy_it_now: {}".format(datetime.datetime.now(), e))
+            db_logger.error("{}  :  Exception in search_buy_it_now: {}".format(datetime.datetime.now(), e))
             try:
                 print(e.response.dict())
             except:
@@ -225,7 +225,7 @@ class WantedItem(models.Model):
             else:
                 return []
         except ConnectionError as e:
-            logging.error("{}  :  Exception in search_auctions: {}".format(datetime.datetime.now(), e))
+            db_logger.error("{}  :  Exception in search_auctions: {}".format(datetime.datetime.now(), e))
             try:
                 print(e.response.dict())
             except:
@@ -246,7 +246,7 @@ class WantedItem(models.Model):
             return response.get('Item')
 
         except ConnectionError as e:
-            logging.error("{}  :  Exception in get_single_item: {}".format(datetime.datetime.now(), e))
+            db_logger.exception("{}  :  Exception in get_single_item: {}".format(datetime.datetime.now(), e))
             try:
                 print(e.response.dict())
             except:
@@ -309,7 +309,7 @@ class EbayItem(models.Model):
             else:
                 return False
         except ConnectionError as e:
-            logging.error("{}  :  Exception in is_recent: {}".format(datetime.datetime.now(), e))
+            db_logger.exception("{}  :  Exception in is_recent: {}".format(datetime.datetime.now(), e))
             try:
                 print(e.response.dict())
             except:
@@ -330,7 +330,7 @@ class EbayItem(models.Model):
             else:
                 return False
         except ConnectionError as e:
-            logging.error("{}  :  Exception in is_ending_soon: {}".format(datetime.datetime.now(), e))
+            db_logger.exception("{}  :  Exception in is_ending_soon: {}".format(datetime.datetime.now(), e))
             try:
                 print(e.response.dict())
             except:
@@ -341,7 +341,7 @@ class EbayItem(models.Model):
             anti_keywords_list = anti_keywords.split(',')
             for anti in anti_keywords_list:
                 if anti.lower() in text.lower().strip('\n'):
-                    logging.info(
+                    db_logger.info(
                         "{}  :  Filtered out anti keyword [{}] from item [{}]".format(datetime.datetime.now(), anti,
                                                                                       str(text)))
                     print(
@@ -351,7 +351,7 @@ class EbayItem(models.Model):
 
             return True
         except ConnectionError as e:
-            logging.error("{}  :  Exception in filter_anti_keywords: {}".format(datetime.datetime.now(), e))
+            db_logger.exception("{}  :  Exception in filter_anti_keywords: {}".format(datetime.datetime.now(), e))
             try:
                 print(e.response.dict())
             except:
@@ -397,7 +397,7 @@ class EbayItem(models.Model):
             return True
 
         except ConnectionError as e:
-            logging.error("{}  :  Exception in filter_item: {}".format(datetime.datetime.now(), e))
+            db_logger.exception("{}  :  Exception in filter_item: {}".format(datetime.datetime.now(), e))
             try:
                 print(e.response.dict())
             except:
@@ -406,6 +406,7 @@ class EbayItem(models.Model):
     def send_alert(self, wanted_item: WantedItem):
         try:
             print("sending alert for item: {}".format(self.url))
+            db_logger.info("Sending alert for item: {}".format(self.url))
 
             notification_routes = wanted_item.notifications.all()
             for notification_route in notification_routes:
@@ -453,7 +454,7 @@ class EbayItem(models.Model):
                     pass
 
         except ConnectionError as e:
-            logging.error("{}  :  Exception in send_alert: {}".format(datetime.datetime.now(), e))
+            db_logger.exception("{}  :  Exception in send_alert: {}".format(datetime.datetime.now(), e))
             try:
                 print(e.response.dict())
             except:
